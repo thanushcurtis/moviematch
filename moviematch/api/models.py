@@ -1,16 +1,15 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
-# Custom User Manager
+
 class UserManager(BaseUserManager):
-    def create_user(self, username, first_name, last_name, password=None):
+    def create_user(self, username, name, password=None):
         if not username:
             raise ValueError('Users must have a username')
 
         user = self.model(
             username=username,
-            first_name=first_name,
-            last_name=last_name,
+            name=name
         )
 
         user.set_password(password)
@@ -20,13 +19,12 @@ class UserManager(BaseUserManager):
 # User Model
 class User(AbstractBaseUser):
     username = models.CharField(max_length=255, unique=True)
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
 
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['first_name', 'last_name']
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return self.username
