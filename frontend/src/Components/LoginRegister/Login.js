@@ -1,31 +1,42 @@
 import React,{ useState } from "react";
-import "./LoginRegister.css";
+import './LoginRegister.css';
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock } from "react-icons/fa";
 
 function Login(){
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loginSuccess, setLoginSuccess] = useState(false); // New state for tracking login success
+  const [loginSuccess, setLoginSuccess] = useState(false); 
+  const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    // Replace with your API endpoint
-    const response = await fetch('http://localhost:8000/login/', {
+  
+    const response = await fetch('/login/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: "include",
+      mode: 'cors',
       body: JSON.stringify({ username, password }),
     });
-
+  
     if (response.status === 200) {
-      setLoginSuccess(true); // Update state on successful login
+      const data = await response.json();
+      console.log("Login successful!");
+      console.log('Username:', data.username); 
+      console.log("Response:", data);
+      
+  
+      navigate("/genre-selection");
+      setLoginSuccess(true);
     } else {
-      alert('Login failed! Please check your credentials.');
+      const errorData = await response.json(); // Get the error message from the response
+      alert(errorData.message); // Alert the actual error message
     }
   };
+  
 
   return (
     <div className="wrapper">
