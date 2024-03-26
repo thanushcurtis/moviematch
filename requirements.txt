@@ -1,6 +1,4 @@
 annotated-types==0.6.0
-appnope @ file:///home/conda/feedstock_root/build_artifacts/appnope_1649077682618/work
-asttokens @ file:///home/conda/feedstock_root/build_artifacts/asttokens_1698341106958/work
 async-timeout==4.0.3
 blinker==1.7.0
 blis==0.7.11
