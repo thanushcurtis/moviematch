@@ -1,5 +1,4 @@
-from flask import Flask, request, jsonify, session, redirect, url_for
-from flask_pymongo import PyMongo
+from flask import Flask, request, jsonify, session
 from config import ApplicationConfig
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_cors import CORS
@@ -10,7 +9,9 @@ from dotenv import load_dotenv
 import os
 import requests
 import spacy
+from flask_pymongo import PyMongo
 from rake_nltk import Rake
+import random
 
 app = Flask(__name__)
 app.config.from_object(ApplicationConfig)
@@ -265,6 +266,7 @@ def get_recommendations():
 
         if 'title' in movie_details_response:
             recommended_movies_details.append({
+                'id':movie_details_response['id'],
                 'name': movie_details_response['title'],
                 'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
                 'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
@@ -275,6 +277,29 @@ def get_recommendations():
 
     
 
+@app.route('/movie-details/<movie_id>', methods=['GET'])
+def movie_details(movie_id):
+
+    url = f'https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&append_to_response=videos,credits'
+    
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json() 
+        movie_reviews= get_movie_reviews(movie_id)
+        movie_keywords=process_reviews({movie_id: movie_reviews},positive_keywords,nlp)
+        movie_details = {
+            'title': data['title'],
+            'release_date': data['release_date'],
+            'poster_path': f"https://image.tmdb.org/t/p/original{data['poster_path']}",
+            'overview': data['overview'],
+            'cast': [cast_member['name'] for cast_member in data['credits']['cast'][:5]],  # Top 5 cast members
+            'user_score': data['vote_average'],
+            'keywords': movie_keywords
+        }
+        return jsonify(movie_details)
+    else:
+        return jsonify({'error': 'Failed to fetch movie details'}), 404
+    
 
 #recommendation functions
 def get_movie_reviews(movie_id):
@@ -354,7 +379,6 @@ def filter_keywords(text, positive_keywords, nlp):
     for token in doc:
 
         if token.pos_ == 'ADJ':
-            # Check each keyword token for similarity
             for keyword_token in keywords_tokens:
              
                 if token.text.lower() == keyword_token.text.lower() or token.similarity(keyword_token) > 0.8:
@@ -442,22 +466,22 @@ def fetch_movie_reviews(movie_id):
         
         return reviews_list
     return []
-
 def get_recommended_movies(movie_keywords_dict, user_keywords, nlp):
-
-
-    recommended_movies = []
-
+    movie_scores = []
     for movie_id, keywords_with_scores in movie_keywords_dict.items():
         keywords_text = '. '.join([phrase for score, phrase in keywords_with_scores])
-        
-
         matched_keywords = filter_keywords(keywords_text, user_keywords, nlp)
-
+        
         if matched_keywords:
-            recommended_movies.append(movie_id)
-    
-    return recommended_movies
+            matched_count = len(matched_keywords)
+            movie_scores.append((movie_id, matched_count))
+
+    sorted_movie_ids = [movie_id for movie_id, _ in sorted(movie_scores, key=lambda x: x[1], reverse=True)]
+    print("total recommended movies",len(sorted_movie_ids))
+    top_20_movies = random.sample(sorted_movie_ids, min(20, len(sorted_movie_ids)))
+
+    return top_20_movies
+
 
 if __name__ == "__main__":
     app.run(debug=True)

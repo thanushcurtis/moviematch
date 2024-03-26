@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import './LoginRegister.css';
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock, FaEnvelope } from "react-icons/fa";
 
@@ -26,9 +27,9 @@ function Register() {
         try {
             const data = await response.json();
             if(response.status === 201) {
-                navigate("/", { replace: true });
+                navigate("/login", { replace: true });
             } else {
-                // Handle errors (e.g., display error message)
+                alert(data.message);
             }
         } catch (error) {
             console.error('Error parsing JSON:', error);
@@ -82,7 +83,7 @@ function Register() {
                 </div>
                 <button type="submit">Register</button>
                 <div className="register_link">
-                    <p>Already have an account? <a href="/"> Login </a></p>
+                    <p>Already have an account? <a href="/login"> Login </a></p>
                 </div>
             </form>
         </div>

@@ -1,5 +1,4 @@
 import React,{ useState } from "react";
-import './LoginRegister.css';
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock } from "react-icons/fa";
 
@@ -32,8 +31,8 @@ function Login(){
       navigate("/genre-selection");
       setLoginSuccess(true);
     } else {
-      const errorData = await response.json(); // Get the error message from the response
-      alert(errorData.message); // Alert the actual error message
+      const errorData = await response.json();
+      alert(errorData.message); 
     }
   };
   

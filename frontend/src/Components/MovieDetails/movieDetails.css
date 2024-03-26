@@ -54,7 +54,7 @@ body {
 }
 
 .movie_details img {
-  max-width: 100%;
+  max-width: 200px;
   border-radius: 10px;
 }
 
@@ -82,7 +82,7 @@ body {
   background-color: #e2e2e2;
 }
 
-/* Input and search button styling */
+
 .input_box {
   width: 100%;
   margin: 30px 0;
@@ -112,11 +112,13 @@ body {
   margin-top: 10px;
 }
 
+
+
 .input_box button:hover {
   background-color: #e2e2e2;
 }
 
-
+/* Recommendation page styles */
 .wrapper {
   display: flex;
   flex-direction: column;
@@ -131,7 +133,7 @@ body {
 
 .wrapper .genre-buttons {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(8, 1fr); 
     gap: 10px;
     justify-content: center; 
   }
@@ -139,7 +141,7 @@ body {
   .wrapper .genre-buttons > div {
     display: grid;
     grid-auto-flow: column; 
-    justify-content: center;
+    justify-content: center; 
   }
   
 
@@ -197,18 +199,18 @@ body {
     background-color: #f1f1f1; 
     border-radius: 10px; 
     padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   .movie-item div {
     display: flex;
     flex-direction: column;
     align-items: center; 
     justify-content: center; 
-    width: 100%; 
+    width: 100%;
   }
   
   .movie-item img {
-    width: 100%; 
+    width: 100%;
     height: auto; 
     border-radius: 8px; 
     margin-bottom: 10px; 
@@ -223,7 +225,7 @@ body {
   .movie-item button {
     padding: 8px 16px;
     width: 150px; 
-    height: 40px; 
+    height: 40px;
     border-radius: 20px;
     background-color: #333;
     color: #fff;
@@ -238,7 +240,7 @@ body {
     
   }
   
-  
+ 
   .movie-item button {
     white-space: nowrap;
     overflow: hidden;
@@ -251,28 +253,6 @@ body {
     background-color: #9f9f9f;
   }
 
-  .movie_details ul {
-    list-style-type: none;
-    padding: 0;
-  }
-  
-  .movie_details li {
-    margin: 5px 0;
-    color: white; 
-  }
-  
-  .keywords {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  
-  .keywords li {
-    background-color: #333; 
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 15px;
-  }
   
 
 @media (max-width: 800px) {

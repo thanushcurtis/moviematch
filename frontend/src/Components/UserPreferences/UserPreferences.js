@@ -34,10 +34,11 @@ function GenreSelection(){
 
         console.log("Session Username:", data.username);
         setUsername(data.username);
-        } else
+        } 
+        else
         {
             console.log("User is not logged in.");
-            setUsername("User is not logged in");
+            setUsername(null);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -45,9 +46,19 @@ function GenreSelection(){
       }
   };
 
+  if (!username) {
+    
+    return (
+        <div>
+            <p>User not logged in</p>
+            <button className='next_page_btn' onClick={() => navigate('/login')}>Login</button>
+        </div>
+    );
+}
+
 
   const fetchMovieDetails = async () => {
-    if (!searchQuery) return; // Prevent searching for an empty string
+    if (!searchQuery) return;
     try {
         const response = await fetch(`/get_movies/?query=${encodeURIComponent(searchQuery)}`);
         const data = await response.json();
@@ -79,14 +90,6 @@ const postWatchedMovie = async (movieId) => {
     }
 };
 
-if (username === null) {
-    return (
-        <div className='wrapper'>
-            <h2>User is not logged in, please login.</h2>
-            <button onClick={() => navigate("/")}>Login</button>
-        </div>
-    );
-}
 
 
 return (
