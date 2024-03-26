@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import './LoginRegister.css';
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock, FaEnvelope } from "react-icons/fa";
 
@@ -16,19 +17,22 @@ function Register() {
             alert("Passwords do not match!");
             return;
         }
-        // Replace 'http://localhost:8000/register' with your actual API endpoint
-        const response = await fetch('http://localhost:8000/register/', {
+        const response = await fetch('http://127.0.0.1:5000/register/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ username: email, name: name, password: password }),
         });
-        const data = await response.json();
-        if(response.status === 201) {
-            navigate("/", { replace: true });
-        } else {
-            // Handle errors (e.g., display error message)
+        try {
+            const data = await response.json();
+            if(response.status === 201) {
+                navigate("/login", { replace: true });
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error('Error parsing JSON:', error);
         }
     };
     
@@ -79,7 +83,7 @@ function Register() {
                 </div>
                 <button type="submit">Register</button>
                 <div className="register_link">
-                    <p>Already have an account? <a href="/"> Login </a></p>
+                    <p>Already have an account? <a href="/login"> Login </a></p>
                 </div>
             </form>
         </div>
