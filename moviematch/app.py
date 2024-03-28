@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_from_directory
 from config import ApplicationConfig
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_cors import CORS
@@ -13,7 +13,14 @@ from flask_pymongo import PyMongo
 from rake_nltk import Rake
 import random
 
-app = Flask(__name__)
+
+
+
+
+app = Flask(__name__, static_folder='frontend/build', static_url_path='')
+
+
+
 app.config.from_object(ApplicationConfig)
 CORS(app, origins="http://localhost:3000", supports_credentials=True,samesite=None, secure=False)
 tmdb_api_key = app.config["TMDB_API_KEY"]
@@ -54,9 +61,18 @@ except Exception as e:
     app.logger.error("Failed to connect to MongoDB: {}".format(str(e)), exc_info=True)
 
 
-@app.route('/')
-def index():
-    return " Welcome to MovieMatch! "
+@app.errorhandler(404)
+def not_found(e):
+    return app.send_static_file('index.html')
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 @app.route("/login/", methods=["POST"])
 @cross_origin(supports_credentials=True)
@@ -484,5 +500,5 @@ def get_recommended_movies(movie_keywords_dict, user_keywords, nlp):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+   app.run(port=5000)
 
