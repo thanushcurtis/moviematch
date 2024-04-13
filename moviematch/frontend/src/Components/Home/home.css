@@ -7,7 +7,7 @@
   box-sizing: border-box;
 }
 
-body {
+.main_page {
   font-family: 'Poppins', sans-serif;
   display: flex;
   justify-content: center;
@@ -17,37 +17,6 @@ body {
   color: #333; 
 }
 
-.container {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 20px;
-  padding: 20px;
-  max-width: 800px;
-  border-radius: 10px;
-  color: #fbfbfb; 
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: rgb(5, 30, 74);
-}
-
-
-.next_page_btn, .signup-link {
-  background: white;
-  color: #051E4A; 
-  border-radius: 20px;
-  padding: 10px 20px;
-  text-decoration: none; 
-  font-weight: 600;
-  margin-top: 20px;
-  display: inline-block;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.next_page_btn:hover, .signup-link:hover {
-  background-color: #e2e2e2;
-}
-
 .register_link{
   font-size: 15px;
   text-align: center;
@@ -55,11 +24,75 @@ body {
 
 }
 
-.wrapper{
+.main_wrapper{
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   background-color: rgb(5, 30, 74);
   color: white;
   border-radius: 10px;
   padding: 30px 40px;
+  width: 80%;
+
+
+}
+
+.main_wrapper button {
+  width: 100%;
+  height: 50px;
+  padding: 12px 24px;
+  border: none;
+  outline: none;
+  color: black;
+  background-color: white;
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+.main_wrapper p{
+  padding-top: 10px;
+ 
+  
+}
+
+.main_wrapper button:hover {
+  background-color: #e2e2e2;
+}
+
+
+.main_opening {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px;
+}
+
+.main_opening h1 {
+  margin-bottom: 5px; 
+}
+
+.main_opening p, .main_opening ul {
+  margin-bottom: 5px; 
+}
+
+.main_opening ul {
+  padding-left: 20px; 
+  text-align: left;
+}
+
+.main_opening footer {
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px; 
+}
+
+.register_link{
+  font-size: 15px;
+  text-align: center;
+  margin-top: 20px;
 
 }
 .register_link p a {
@@ -74,7 +107,7 @@ body {
 
 
 @media (max-width: 768px) {
-  .container {
+  .main_wrapper {
     max-width: 95%; 
   }
 

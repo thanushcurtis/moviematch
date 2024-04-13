@@ -61,10 +61,6 @@ function Login(){
           />
           <FaLock className="icon" />
         </div>
-        <div className="forgot_checkbox">
-          <label><input type="checkbox"/> Remember me</label>
-          <a href="#">Forgot Password?</a>
-        </div>
         <button type="submit">Login</button>
         {loginSuccess && <p>Logged in successfully!</p>}
         <div className="register_link">

@@ -1,10 +1,10 @@
-import React from 'react';
+import React, {useState} from 'react';
 import './NavBar.css';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   const handleLogout = async (event) => {
     event.preventDefault();
@@ -12,7 +12,15 @@ const Navbar = () => {
       const response = await fetch('/logout/', { method: 'GET' });
       const data = await response.json();
       console.log(data.message); 
-      navigate('/');
+      if (response.ok) {
+        setIsLoggedIn(false);
+        localStorage.removeItem('genres');
+        localStorage.removeItem('recommendations');
+        localStorage.removeItem('watchList');
+        navigate('/login');
+      } else{
+        console.log('Logout failed:', data.message);
+      }
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -25,7 +33,11 @@ const Navbar = () => {
         <a href="/">Home</a>
         <a href="/genre-selection">Select Movies</a>
         <a href="/recommendation">Recommendations</a>
-        <a href="/logout" onClick={handleLogout}>Logout</a>
+        {isLoggedIn ? (
+          <a href="/logout" onClick={handleLogout}>Logout</a>
+        ) : (
+          <a href="/login">Login</a>
+        )}
       </div>
     </nav>
 

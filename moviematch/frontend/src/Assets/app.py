@@ -1,25 +1,26 @@
-from flask import Flask, request, jsonify, session, Response,stream_with_context
+from flask import Flask, request, jsonify, session, send_from_directory, Response
 from config import ApplicationConfig
-import json
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_cors import CORS
 from flask_session import Session
 from flask_cors import cross_origin
 import requests
+from dotenv import load_dotenv
+import os
 import requests
 import spacy
 from flask_pymongo import PyMongo
-from recom import MovieRecommendation
+from rake_nltk import Rake
+import random
 import time
-import os
-from flask import send_from_directory
+import json
+
 
 
 
 
 
 app = Flask(__name__, static_folder='frontend/build', static_url_path='')
-recommender = MovieRecommendation()
 
 
 
@@ -62,18 +63,23 @@ except Exception as e:
     app.logger.error("Failed to connect to MongoDB: {}".format(str(e)), exc_info=True)
 
 
-@app.errorhandler(404)
-def not_found(e):
-    return app.send_static_file('index.html')
+@app.route('/')
+def index():
+    return " Welcome to MovieMatch! "
 
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
-    else:
-        return send_from_directory(app.static_folder, 'index.html')
+# @app.errorhandler(404)
+# def not_found(e):
+#     return app.send_static_file('index.html')
+
+
+# @app.route('/', defaults={'path': ''})
+# @app.route('/<path:path>')
+# def catch_all(path):
+#     if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+#         return send_from_directory(app.static_folder, path)
+#     else:
+#         return send_from_directory(app.static_folder, 'index.html')
 
 @app.route("/login/", methods=["POST"])
 @cross_origin(supports_credentials=True)
@@ -212,8 +218,8 @@ def post_watched_movie():
     
     user_doc = mongo.db.users.find_one({"username": username})
     watched_movies = user_doc.get('watchedMovies', [])
-    movie_reviews = recommender.fetch_reviews_for_watched_movies(watched_movies)
-    user_keywords = recommender.process_reviews(movie_reviews,positive_keywords,nlp)
+    movie_reviews = fetch_reviews_for_watched_movies(watched_movies)
+    user_keywords = process_reviews(movie_reviews,positive_keywords,nlp)
 
     if 'userKeywords' in user_doc:
         mongo.db.users.update_one(
@@ -238,7 +244,10 @@ def get_genres():
         response = requests.get(url)
         # Ensure the response is successful
         response.raise_for_status()
+        
         data = response.json()
+        
+
         genre_names = [genre['name'] for genre in data['genres']]
         
 
@@ -251,52 +260,46 @@ def get_genres():
 
 
 
-@app.route("/get_recommendations/", methods=['GET'])
-@cross_origin(origins="http://localhost:3000", supports_credentials=True)
+@app.route("/get_recommendations/", methods=['POST'])
 def get_recommendations():
+    data = request.get_json()
     username = session.get('username')
 
-    genre_names = request.args.getlist('genres') 
-    print(genre_names)
+    genre_names = data.get('genres', [])
 
     genre_mapping = {genre['name']: str(genre['id']) for genre in mongo.db.genres.find()}
 
     genre_ids = [genre_mapping[name] for name in genre_names if name in genre_mapping]
-    print(genre_ids) 
-    def generate_recom():
-        
-        print("Fetching Genre Movies")
-        yield 'event: progress\ndata: Fetching Genre Movies\n\n'
-        time.sleep(1)
-        genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids) 
-        print("Extracting Genre Keywords")
-        yield 'event: progress\ndata: Fetching Genre Keywords\n\n'
-        time.sleep(1)
-        genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
-        user_doc = mongo.db.users.find_one({"username": username})
-        user_keywords = user_doc.get('userKeywords', [])
-        yield 'event: progress\ndata: Processing Movie Recommendations...\n\n'
-        time.sleep(1)
-        recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
-        recommended_movies_details = []
-        for movie_id in recommended_movies:
-            movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
-            movie_details_response = requests.get(movie_url).json()
 
-            if 'title' in movie_details_response:
-                recommended_movies_details.append({
-                    'id':movie_details_response['id'],
-                    'name': movie_details_response['title'],
-                    'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
-                    'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
-                })
-        yield f'event: data\ndata: {json.dumps(recommended_movies_details)}\n\n'
-    
-    res = Response(stream_with_context(generate_recom()), content_type='text/event-stream')
-    res.headers['Cache-Control'] = 'no-cache'
-    res.headers['X-Accel-Buffering'] = 'no'
-    res.headers['Content-Type'] = 'text/event-stream'
-    return res
+
+    print(genre_ids)  
+
+
+    print("Fetching Genre Movies")
+    genre_reviews = fetch_reviews_for_genre_movies(genre_ids) 
+    print("Fetching Genre Keywords")
+    genre_keywords = extract_keywords_from_all_reviews(genre_reviews)
+
+    user_doc = mongo.db.users.find_one({"username": username})
+    user_keywords = user_doc.get('userKeywords', [])
+    print("Getting Recommendations")
+    recommended_movies = get_recommended_movies(genre_keywords, user_keywords, nlp)
+
+    recommended_movies_details = []
+    for movie_id in recommended_movies:
+        movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
+        movie_details_response = requests.get(movie_url).json()
+
+        if 'title' in movie_details_response:
+            recommended_movies_details.append({
+                'id':movie_details_response['id'],
+                'name': movie_details_response['title'],
+                'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
+                'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
+            })
+
+    print("Recommendations Sent")
+    return jsonify(recommended_movies_details)
     
 
 @app.route('/movie-details/<movie_id>', methods=['GET'])
@@ -307,8 +310,8 @@ def movie_details(movie_id):
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json() 
-        movie_reviews= recommender.get_movie_reviews(movie_id)
-        movie_keywords= recommender.process_reviews({movie_id: movie_reviews},positive_keywords,nlp)
+        movie_reviews= get_movie_reviews(movie_id)
+        movie_keywords=process_reviews({movie_id: movie_reviews},positive_keywords,nlp)
         movie_details = {
             'title': data['title'],
             'release_date': data['release_date'],
@@ -399,6 +402,187 @@ def get_watchlist_ids():
     user_doc = mongo.db.users.find_one({"username": username})
     watchlist = user_doc.get('watchlist', [])
     return watchlist
+
+#recommendation functions
+def get_movie_reviews(movie_id):
+    url = f'https://api.themoviedb.org/3/movie/{movie_id}/reviews?&page=1'
+    headers = {
+    'Authorization': 'Bearer '+TMBD_ACCESS_TOKEN,
+    'accept': 'application/json',
+    }
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        reviews_data = response.json()
+        reviews_list = []
+        
+
+        for review in reviews_data.get("results", []):
+            review_info = {
+                "movie_id": movie_id,
+                "rating": review["author_details"].get("rating"),
+                "content": review["content"]
+            }
+            reviews_list.append(review_info)
+        
+        return reviews_list
+    else:
+        print("Failed to fetch reviews from TMDB API")
+        return []  
+
+def fetch_reviews_for_watched_movies(watched_movies):
+    movie_reviews_dict = {}
+    for movie_id in watched_movies:
+        reviews = get_movie_reviews(movie_id)
+        movie_reviews_dict[movie_id] = reviews
+    return movie_reviews_dict
+
+def ensure_nltk_data():
+    import nltk
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt')
+
+def extract_keywords_from_all_reviews(movie_reviews_dict):
+
+    ensure_nltk_data()  
+    movie_keywords_dict = {} 
+    
+    for movie_id, reviews in movie_reviews_dict.items():
+        rake = Rake()
+        all_phrases_with_scores = []
+        for review in reviews:
+            rake.extract_keywords_from_text(review['content'])
+            phrases_with_scores = rake.get_ranked_phrases_with_scores()
+            all_phrases_with_scores.extend(phrases_with_scores)
+
+        # Sort phrases by score in descending order and keep unique
+        sorted_phrases_with_scores = sorted(all_phrases_with_scores, key=lambda x: x[0], reverse=True)
+        unique_keywords_with_scores = []
+        seen_keywords = set()
+        for score, phrase in sorted_phrases_with_scores:
+            if phrase not in seen_keywords:
+                unique_keywords_with_scores.append((score, phrase))
+                seen_keywords.add(phrase)
+            if len(unique_keywords_with_scores) == 100: 
+                break
+
+        movie_keywords_dict[movie_id] = unique_keywords_with_scores
+
+    return movie_keywords_dict
+# more filteration using spacy 
+def filter_keywords(text, positive_keywords, nlp):
+    doc = nlp(text)
+    matched_keywords = []
+
+    keywords_tokens = [nlp(keyword)[0] for keyword in positive_keywords]
+
+    for token in doc:
+
+        if token.pos_ == 'ADJ':
+            for keyword_token in keywords_tokens:
+             
+                if token.text.lower() == keyword_token.text.lower() or token.similarity(keyword_token) > 0.8:
+                    matched_keywords.append(token.text.lower())
+
+    return list(set(matched_keywords))
+
+def list_to_pipe_string(lst):
+
+    return "|".join(map(str, lst))
+
+def process_reviews(movie_reviews_dict, positive_keywords, nlp):
+    keywords = extract_keywords_from_all_reviews(movie_reviews_dict)
+    all_phrases = []
+    for keywords_with_scores in keywords.values():
+        for _, phrase in keywords_with_scores:
+            all_phrases.append(phrase)  # Collecting phrases only
+
+    text = '. '.join(all_phrases)
+    final_output = filter_keywords(text, positive_keywords, nlp)
+    return final_output
+
+# function for getting all reviews for a genre
+def fetch_reviews_for_genre_movies(genre_ids):
+
+    movies = discover_movies_by_genre(genre_ids)
+     
+    movie_reviews_dict = {} 
+    # Iterate over each movie to fetch its reviews
+    for movie in movies:
+        movie_id = movie['id']
+        reviews = fetch_movie_reviews(movie_id)  
+        movie_reviews_dict[movie_id] = reviews    
+    return movie_reviews_dict
+
+
+def discover_movies_by_genre(genre_ids):
+    all_filtered_results = [] 
+
+    for page in range(1, 10):  
+        url = f'https://api.themoviedb.org/3/discover/movie?with_genres={"|".join(genre_ids)}&page={page}'
+        headers = {
+            'Authorization': 'Bearer ' + TMBD_ACCESS_TOKEN,
+            'accept': 'application/json',
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            results = response.json()['results']
+            filtered_results = [
+                {
+                    'id': movie['id'],
+                    'original_title': movie['original_title'],
+                }
+                for movie in results
+            ]
+            all_filtered_results.extend(filtered_results)  
+        else:
+            print(f"Failed to fetch movies from TMDB API for page {page}")
+            break  
+    return all_filtered_results
+
+# i have another funtion
+def fetch_movie_reviews(movie_id):
+
+    reviews_url = f'https://api.themoviedb.org/3/movie/{movie_id}/reviews?language=en-US&page=1'
+    headers = {
+    'Authorization': 'Bearer '+TMBD_ACCESS_TOKEN,
+    'accept': 'application/json',
+    }
+    response = requests.get(reviews_url,headers=headers)
+    if response.status_code == 200:
+        reviews_data = response.json()
+        reviews_list = []
+        
+
+        for review in reviews_data.get("results", []):
+            review_info = {
+                "movie_id": movie_id,
+                "rating": review["author_details"].get("rating"),
+                "content": review["content"]
+            }
+            reviews_list.append(review_info)
+        
+        return reviews_list
+    return []
+
+
+def get_recommended_movies(movie_keywords_dict, user_keywords, nlp):
+    movie_scores = []
+    for movie_id, keywords_with_scores in movie_keywords_dict.items():
+        keywords_text = '. '.join([phrase for score, phrase in keywords_with_scores])
+        matched_keywords = filter_keywords(keywords_text, user_keywords, nlp)
+        
+        if matched_keywords:
+            matched_count = len(matched_keywords)
+            movie_scores.append((movie_id, matched_count))
+
+    sorted_movie_ids = [movie_id for movie_id, _ in sorted(movie_scores, key=lambda x: x[1], reverse=True)]
+    print("total recommended movies",len(sorted_movie_ids))
+    top_20_movies = random.sample(sorted_movie_ids, min(20, len(sorted_movie_ids)))
+
+    return top_20_movies
 
 
 if __name__ == "__main__":

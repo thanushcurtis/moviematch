@@ -66,194 +66,28 @@ body {
   font-weight: 700;
 }
 
-.wrapper button,
-.next_page_btn {
+.wrapper button {
   width: 100%;
   height: 50px;
+  padding: 12px 24px;
   border: none;
   outline: none;
   color: black;
+  background-color: white;
   font-size: 16px;
   margin-top: 20px;
 }
+
+.button-container {
+  display: flex;
+  gap: 10px;
+}
+
 
 .wrapper button:hover,
 .next_page_btn:hover {
   background-color: #e2e2e2;
 }
-
-
-.input_box {
-  width: 100%;
-  margin: 30px 0;
-}
-
-.input_box input {
-  width: 100%;
-  padding: 15px 20px;
-  border-radius: 40px;
-  border: 2px solid rgba(255, 255, 255, .2);
-  background: transparent;
-  color: white;
-}
-
-.input_box input::placeholder {
-  color: white;
-}
-
-.input_box button {
-  padding: 15px 20px;
-  background: white;
-  border-radius: 40px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, .1);
-  cursor: pointer;
-  font-weight: 700;
-  color: black;
-  margin-top: 10px;
-}
-
-
-
-.input_box button:hover {
-  background-color: #e2e2e2;
-}
-
-/* Recommendation page styles */
-.wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.wrapper h1 {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.wrapper .genre-buttons {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr); 
-    gap: 10px;
-    justify-content: center; 
-  }
-  
-  .wrapper .genre-buttons > div {
-    display: grid;
-    grid-auto-flow: column; 
-    justify-content: center; 
-  }
-  
-
-.wrapper .genre-buttons button {
-  padding: 10px 20px;
-  border-radius: 20px;
-  background-color: #fff;
-  color: #333;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.wrapper .genre-buttons button:hover,
-.wrapper .genre-buttons button.selected {
-  background-color: #9f9f9f;
-}
-
-.wrapper .get-recommendations {
-  padding: 10px 20px;
-  border-radius: 20px;
-  background-color: #fff;
-  color: #333;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.wrapper .get-recommendations:hover {
-  background-color: #e2e2e2;
-}
-
-.wrapper .movie-recommendations {
-  margin-top: 20px;
-}
-
-.wrapper .movie-recommendations h2 {
-  font-size: 1.5rem;
-  margin-bottom: 10px;
-}
-/* Styles for the movies grid */
-.movies-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); 
-    gap: 20px; 
-    padding: 20px 0; 
-  }
-  
-  .movie-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    align-items: center; 
-    justify-content: center;
-    background-color: #f1f1f1; 
-    border-radius: 10px; 
-    padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  .movie-item div {
-    display: flex;
-    flex-direction: column;
-    align-items: center; 
-    justify-content: center; 
-    width: 100%;
-  }
-  
-  .movie-item img {
-    width: 100%;
-    height: auto; 
-    border-radius: 8px; 
-    margin-bottom: 10px; 
-  }
-  
-  .movie-item h3,
-  .movie-item p {
-    text-align: center; 
-    color: #333;
-  }
-  
-  .movie-item button {
-    padding: 8px 16px;
-    width: 150px; 
-    height: 40px;
-    border-radius: 20px;
-    background-color: #333;
-    color: #fff;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    transition: background-color 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    
-    
-  }
-  
- 
-  .movie-item button {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-
-  }
-  
-  
-  .movie-item button:hover {
-    background-color: #9f9f9f;
-  }
-
-  
 
 @media (max-width: 800px) {
     .wrapper .genre-buttons {
