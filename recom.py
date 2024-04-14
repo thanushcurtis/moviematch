@@ -41,11 +41,21 @@ class MovieRecommendation:
         nltk_data_path = os.path.join(os.path.dirname(__file__), 'nltk_data')
         nltk.data.path.append(nltk_data_path)
         self.ensure_nltk_data()
+        self.load_spacy_model()
     def ensure_nltk_data(self):
         try:
             nltk.data.find('tokenizers/punkt')
         except LookupError:
             raise Exception("Required NLTK datasets are missing!")
+    
+    def load_spacy_model(self):
+        try:
+            self.nlp = spacy.load("en_core_web_md")
+        except OSError:
+            print("Downloading NLTK data and SpaCy models...")
+            from spacy.cli import download
+            download("en_core_web_md")
+            self.nlp = spacy.load("en_core_web_md")
 
 
     # Fetch movie reviews from TMDB API
