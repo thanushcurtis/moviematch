@@ -44,6 +44,7 @@ class MovieRecommendation:
     def ensure_nltk_data(self):
         try:
             nltk.data.find('tokenizers/punkt')
+            nltk.data.find('corpora/stopwords')
         except LookupError:
             raise Exception("Required NLTK datasets are missing!")
     
