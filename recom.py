@@ -13,7 +13,6 @@ class MovieRecommendation:
         load_dotenv()
         self.TMDB_API_KEY = os.getenv("TMDB_API_KEY")
         self.TMDB_ACCESS_TOKEN = os.getenv("TMDB_ACCESS_TOKEN")
-        self.nlp = spacy.load("en_core_web_md")
         self.positive_keywords =  [
             "3-D", "absorbing", "acclaimed", "adult", "adventurous", "ambitious", "artistic",
             "astonishing", "avant-garde", "award-winning", "awe-inspiring", "based on", "beautiful",
