@@ -49,12 +49,12 @@ class MovieRecommendation:
     
     def load_spacy_model(self):
         try:
-            self.nlp = spacy.load("en_core_web_md")
+            self.nlp = spacy.load("en_core_web_md", disable=["parser", "ner"])
         except OSError:
             print("Downloading NLTK data and SpaCy models...")
             from spacy.cli import download
             download("en_core_web_md")
-            self.nlp = spacy.load("en_core_web_md")
+            self.nlp = spacy.load("en_core_web_md", disable=["parser", "ner"])
 
 
     # Fetch movie reviews from TMDB API
