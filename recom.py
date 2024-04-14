@@ -38,13 +38,14 @@ class MovieRecommendation:
             "strong", "stunning", "superb", "suspenseful", "sweet", "theatrical", "thrilling", "touching",
             "underground", "unforgettable", "visionary", "visual", "well-paced", "worthwhile"
         ]
+        nltk_data_path = os.path.join(os.path.dirname(__file__), 'nltk_data')
+        nltk.data.path.append(nltk_data_path)
         self.ensure_nltk_data()
     def ensure_nltk_data(self):
-        """Ensure NLTK datasets are downloaded."""
         try:
             nltk.data.find('tokenizers/punkt')
         except LookupError:
-            nltk.download('punkt', quiet=True, raise_on_error=True)
+            raise Exception("Required NLTK datasets are missing!")
 
 
     # Fetch movie reviews from TMDB API
