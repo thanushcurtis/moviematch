@@ -39,7 +39,6 @@ class MovieRecommendation:
             "underground", "unforgettable", "visionary", "visual", "well-paced", "worthwhile"
         ]
     def ensure_nltk_data(self):
-        import nltk
         try:
             nltk.data.find('tokenizers/punkt')
         except LookupError:
