@@ -17,6 +17,8 @@ Flask-Cors==4.0.0
 Flask-PyMongo==2.3.0
 Flask-Session==0.6.0
 Flask-SocketIO==5.3.6
+gevent==24.2.1
+greenlet==3.0.3
 gunicorn==21.2.0
 h11==0.14.0
 idna==3.6
@@ -54,3 +56,5 @@ wasabi==1.1.2
 weasel==0.3.4
 Werkzeug==3.0.1
 wsproto==1.2.0
+zope.event==5.0
+zope.interface==6.3
