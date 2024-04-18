@@ -1,0 +1,2 @@
+*.pyc
+git add app.py gunicorn_config.py requirements.txt .gitignore
