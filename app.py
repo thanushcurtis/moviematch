@@ -403,4 +403,4 @@ def get_watchlist_ids():
 
 
 if __name__ == "__main__":
-   subprocess.call(["gunicorn", "-b", "0.0.0.0:8080", "app:app", "--timeout", "300", "--worker-class", "gevent"])
+   app.run()
