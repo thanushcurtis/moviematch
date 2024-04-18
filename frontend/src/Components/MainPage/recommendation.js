@@ -54,27 +54,39 @@ function Recommendation() {
         const genreQuery = selectedGenres.map(genre => `genres=${encodeURIComponent(genre)}`).join('&');
         const url = `/get_recommendations/?${genreQuery}`;
         const events = new EventSource(url);
-
+    
         events.addEventListener('progress', function(event) {
-            
             setProgress(event.data);
         });
-
+    
         events.addEventListener('data', function(event) {
-
             setRecommendations(JSON.parse(event.data));
             localStorage.setItem('recommendations', event.data);
             setLoading(false);
             events.close();
         });
-
-        events.onerror = function() {
-            console.error('SSE failed');
+    
+        events.onerror = function(event) {
+            if (event.eventPhase === EventSource.CLOSED) {
+                console.error('SSE closed');
+            } else {
+                console.error('SSE error occurred: ', event);
+            }
             setLoading(false);
             setProgress("Connection failed.");
             events.close();
+    
+            // Optionally, log additional details to understand the network error
+            if (event.target && event.target.readyState === EventSource.CLOSED) {
+                console.error('SSE connection was closed by the server');
+            } else if (event.target && event.target.readyState === EventSource.CONNECTING) {
+                console.error('SSE connection is reconnecting');
+            } else if (event.target && event.target.readyState === EventSource.OPEN) {
+                console.error('SSE connection is open but encountered an error');
+            }
         };
     };
+    
 
     const toggleGenreSelection = (genreName) => {
         setSelectedGenres(prev => prev.includes(genreName) ? prev.filter(name => name !== genreName) : [...prev, genreName]);
