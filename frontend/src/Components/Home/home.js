@@ -7,15 +7,9 @@ function HomePage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const storedWatchList = localStorage.getItem('watchList'); 
-
+        
         fetchUsername();
-        if (storedWatchList) {
-            setWatchList(JSON.parse(storedWatchList));
-        } else{
-
-            fetchWatchList();
-        }
+        fetchWatchList();
     }, []);
 
     const fetchUsername = async () => { 
@@ -55,7 +49,7 @@ function HomePage() {
             }
             const data = await response.json();
             setWatchList(data);
-            localStorage.setItem('watchList', JSON.stringify(data));
+        
 
 
         }catch (error) {
