@@ -13,6 +13,7 @@ from recom import MovieRecommendation
 import time
 import os
 from flask import send_from_directory
+import subprocess
 
 
 
@@ -402,4 +403,4 @@ def get_watchlist_ids():
 
 
 if __name__ == "__main__":
-   app.run()
+   subprocess.call(["gunicorn", "-b", "0.0.0.0:8080", "app:app", "--timeout", "300"])
