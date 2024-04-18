@@ -10,10 +10,10 @@ import requests
 import spacy
 from flask_pymongo import PyMongo
 from recom import MovieRecommendation
-import time
 import os
 from flask import send_from_directory
 import subprocess
+
 
 
 
@@ -237,7 +237,6 @@ def get_genres():
     
     try:
         response = requests.get(url)
-        # Ensure the response is successful
         response.raise_for_status()
         data = response.json()
         genre_names = [genre['name'] for genre in data['genres']]
@@ -248,8 +247,7 @@ def get_genres():
     except requests.RequestException as e:
         print(e)
         return jsonify({"error": "Failed to fetch genres from TMDB"}), 500
-
-
+    
 
 
 @app.route("/get_recommendations/", methods=['GET'])
@@ -257,41 +255,25 @@ def get_genres():
 def get_recommendations():
     username = session.get('username')
     genre_names = request.args.getlist('genres')
-    print(genre_names)
-
     genre_mapping = {genre['name']: str(genre['id']) for genre in mongo.db.genres.find()}
     genre_ids = [genre_mapping[name] for name in genre_names if name in genre_mapping]
-    print(genre_ids)
 
     def generate_recom():
         yield 'event: progress\ndata: Fetching Genre Movies\n\n'
-        time.sleep(1) 
-
-       
-        yield 'event: progress\ndata: Extracting Genre Keywords\n\n'
         genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids)
-        time.sleep(1) 
 
+        yield 'event: progress\ndata: Extracting Genre Keywords\n\n'
         genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
         user_doc = mongo.db.users.find_one({"username": username})
         user_keywords = user_doc.get('userKeywords', [])
 
-     
-        recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
-        recommended_movies_details = []
-
-      
         yield 'event: progress\ndata: Processing Movie Recommendations...\n\n'
-        start_time = time.time()
-        for movie_id in recommended_movies:
-          
-            if time.time() - start_time > 10:
-                yield 'event: progress\ndata: Still processing...\n\n'
-                start_time = time.time() 
+        recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
 
+        recommended_movies_details = []
+        for movie_id in recommended_movies:
             movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
             movie_details_response = requests.get(movie_url).json()
-
             if 'title' in movie_details_response:
                 recommended_movies_details.append({
                     'id': movie_details_response['id'],
@@ -300,10 +282,9 @@ def get_recommendations():
                     'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
                 })
 
-      
         yield f'event: data\ndata: {json.dumps(recommended_movies_details)}\n\n'
-
-    return Response(stream_with_context(generate_recom()), content_type='text/event-stream')
+    response = Response(stream_with_context(generate_recom()), content_type='text/event-stream', headers={'Cache-Control': 'no-cache', 'Connection': 'keep-alive'})
+    return response
 
     
 
@@ -412,7 +393,7 @@ def get_watchlist_ids():
 if __name__ == "__main__":
     command = [
         "gunicorn",
-        "-b", "0.0.0.0:8010",
+        "-b", "0.0.0.0:8080",
         "app:app",
         "--timeout", "300",
         "--worker-class", "gevent",
