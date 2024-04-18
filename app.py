@@ -256,48 +256,55 @@ def get_genres():
 @cross_origin(origins="http://localhost:3000", supports_credentials=True)
 def get_recommendations():
     username = session.get('username')
-
-    genre_names = request.args.getlist('genres') 
+    genre_names = request.args.getlist('genres')
     print(genre_names)
 
     genre_mapping = {genre['name']: str(genre['id']) for genre in mongo.db.genres.find()}
-
     genre_ids = [genre_mapping[name] for name in genre_names if name in genre_mapping]
-    print(genre_ids) 
+    print(genre_ids)
+
     def generate_recom():
-        
-        print("Fetching Genre Movies")
         yield 'event: progress\ndata: Fetching Genre Movies\n\n'
-        time.sleep(1)
-        genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids) 
-        print("Extracting Genre Keywords")
-        yield 'event: progress\ndata: Fetching Genre Keywords\n\n'
-        time.sleep(1)
+        time.sleep(1) 
+
+       
+        yield 'event: progress\ndata: Extracting Genre Keywords\n\n'
+        genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids)
+        time.sleep(1) 
+
         genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
         user_doc = mongo.db.users.find_one({"username": username})
         user_keywords = user_doc.get('userKeywords', [])
-        yield 'event: progress\ndata: Processing Movie Recommendations...\n\n'
-        time.sleep(1)
+
+     
         recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
         recommended_movies_details = []
+
+      
+        yield 'event: progress\ndata: Processing Movie Recommendations...\n\n'
+        start_time = time.time()
         for movie_id in recommended_movies:
+          
+            if time.time() - start_time > 10:
+                yield 'event: progress\ndata: Still processing...\n\n'
+                start_time = time.time() 
+
             movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
             movie_details_response = requests.get(movie_url).json()
 
             if 'title' in movie_details_response:
                 recommended_movies_details.append({
-                    'id':movie_details_response['id'],
+                    'id': movie_details_response['id'],
                     'name': movie_details_response['title'],
                     'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
                     'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
                 })
+
+      
         yield f'event: data\ndata: {json.dumps(recommended_movies_details)}\n\n'
-    
-    res = Response(stream_with_context(generate_recom()), content_type='text/event-stream')
-    res.headers['Cache-Control'] = 'no-cache'
-    res.headers['X-Accel-Buffering'] = 'no'
-    res.headers['Content-Type'] = 'text/event-stream'
-    return res
+
+    return Response(stream_with_context(generate_recom()), content_type='text/event-stream')
+
     
 
 @app.route('/movie-details/<movie_id>', methods=['GET'])
@@ -405,7 +412,7 @@ def get_watchlist_ids():
 if __name__ == "__main__":
     command = [
         "gunicorn",
-        "-b", "0.0.0.0:8080",
+        "-b", "0.0.0.0:8010",
         "app:app",
         "--timeout", "300",
         "--worker-class", "gevent",

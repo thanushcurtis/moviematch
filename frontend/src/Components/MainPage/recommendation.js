@@ -53,39 +53,42 @@ function Recommendation() {
         setProgress("Starting recommendation process...");
         const genreQuery = selectedGenres.map(genre => `genres=${encodeURIComponent(genre)}`).join('&');
         const url = `/get_recommendations/?${genreQuery}`;
-        const events = new EventSource(url);
     
-        events.addEventListener('progress', function(event) {
-            setProgress(event.data);
-        });
+        let events = new EventSource(url);
     
-        events.addEventListener('data', function(event) {
-            setRecommendations(JSON.parse(event.data));
-            localStorage.setItem('recommendations', event.data);
-            setLoading(false);
-            events.close();
-        });
+        const setupEventListeners = () => {
+            events.addEventListener('progress', function(event) {
+                setProgress(event.data);
+            });
     
-        events.onerror = function(event) {
-            if (event.eventPhase === EventSource.CLOSED) {
-                console.error('SSE closed');
-            } else {
+            events.addEventListener('data', function(event) {
+                setRecommendations(JSON.parse(event.data));
+                localStorage.setItem('recommendations', event.data);
+                setLoading(false);
+                events.close();
+            });
+    
+            events.onerror = function(event) {
                 console.error('SSE error occurred: ', event);
-            }
-            setLoading(false);
-            setProgress("Connection failed.");
-            events.close();
     
-            // Optionally, log additional details to understand the network error
-            if (event.target && event.target.readyState === EventSource.CLOSED) {
-                console.error('SSE connection was closed by the server');
-            } else if (event.target && event.target.readyState === EventSource.CONNECTING) {
-                console.error('SSE connection is reconnecting');
-            } else if (event.target && event.target.readyState === EventSource.OPEN) {
-                console.error('SSE connection is open but encountered an error');
-            }
+                if (event.target.readyState === EventSource.CLOSED) {
+                    console.error('SSE connection was closed by the server, attempting to reconnect...');
+
+                    setTimeout(() => {
+                        console.log("Reconnecting...");
+                        events = new EventSource(url); 
+                        setupEventListeners(); 
+                    }, 5000);
+                }
+    
+                setLoading(false);
+                setProgress("Connection failed.");
+            };
         };
+    
+        setupEventListeners();
     };
+    
     
 
     const toggleGenreSelection = (genreName) => {
