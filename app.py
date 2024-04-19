@@ -163,7 +163,7 @@ def register():
 @app.route("/get_movies/", methods=['GET'])
 def get_movie_details():
     print("get_movies")
-    search_query = request.args.get('query', '')  # Get the search query from URL parameters
+    search_query = request.args.get('query', '')  
     search_url = f"https://api.themoviedb.org/3/search/movie?api_key={tmdb_api_key}&query={search_query}"
     search_response = requests.get(search_url).json()
 
@@ -250,41 +250,46 @@ def get_genres():
     
 
 
-@app.route("/get_recommendations/", methods=['GET'])
-@cross_origin(origins="http://localhost:3000", supports_credentials=True)
+@app.route("/get_recommendations/", methods=['POST'])
 def get_recommendations():
+    data = request.get_json()
     username = session.get('username')
-    genre_names = request.args.getlist('genres')
+
+    genre_names = data.get('genres', [])
+
     genre_mapping = {genre['name']: str(genre['id']) for genre in mongo.db.genres.find()}
+
     genre_ids = [genre_mapping[name] for name in genre_names if name in genre_mapping]
 
-    def generate_recom():
-        yield 'event: progress\ndata: Fetching Genre Movies\n\n'
-        genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids)
 
-        yield 'event: progress\ndata: Extracting Genre Keywords\n\n'
-        genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
-        user_doc = mongo.db.users.find_one({"username": username})
-        user_keywords = user_doc.get('userKeywords', [])
+    print(genre_ids)  
 
-        yield 'event: progress\ndata: Processing Movie Recommendations...\n\n'
-        recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
 
-        recommended_movies_details = []
-        for movie_id in recommended_movies:
-            movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
-            movie_details_response = requests.get(movie_url).json()
-            if 'title' in movie_details_response:
-                recommended_movies_details.append({
-                    'id': movie_details_response['id'],
-                    'name': movie_details_response['title'],
-                    'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
-                    'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
-                })
+    print("Fetching Genre Movies")
+    genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids) 
+    print("Fetching Genre Keywords")
+    genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
 
-        yield f'event: data\ndata: {json.dumps(recommended_movies_details)}\n\n'
-    response = Response(stream_with_context(generate_recom()), content_type='text/event-stream', headers={'Cache-Control': 'no-cache', 'Connection': 'keep-alive'})
-    return response
+    user_doc = mongo.db.users.find_one({"username": username})
+    user_keywords = user_doc.get('userKeywords', [])
+    print("Getting Recommendations")
+    recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
+
+    recommended_movies_details = []
+    for movie_id in recommended_movies:
+        movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
+        movie_details_response = requests.get(movie_url).json()
+
+        if 'title' in movie_details_response:
+            recommended_movies_details.append({
+                'id':movie_details_response['id'],
+                'name': movie_details_response['title'],
+                'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
+                'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
+            })
+
+    print("Recommendations Sent")
+    return jsonify(recommended_movies_details)
 
     
 
