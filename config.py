@@ -10,7 +10,7 @@ class ApplicationConfig:
     TMDB_API_KEY = os.environ["TMDB_API_KEY"]
     TMDB_ACCESS_TOKEN = os.environ["TMDB_ACCESS_TOKEN"]
     SESSION_TYPE = "filesystem"
-    SESSION_FILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flask_session')
+    SESSION_FILE_DIR = '/tmp/flask_session'
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
     SESSION_COOKIE_SECURE = False 
