@@ -11,7 +11,8 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    chmod -R 777 /usr/local/lib/python3.9/site-packages
 
 
 COPY . /app/
