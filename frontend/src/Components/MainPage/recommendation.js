@@ -103,10 +103,13 @@ function Recommendation() {
             });
 
             if (!response.ok) {
+                console.log('Response:', response);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
+            console.log('Response Received')
+            console.log('Recommendations:', data);
             setRecommendations(data);
             localStorage.setItem('recommendations', JSON.stringify(data));
         } catch (error) {
