@@ -396,4 +396,4 @@ def get_watchlist_ids():
 
 
 if __name__ == "__main__":
-    app.run(port=8080)
+    os.system("gunicorn -w 4 -b 0.0.0.0:8080 -t 300 app:app")
