@@ -396,4 +396,4 @@ def get_watchlist_ids():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(port=8080)

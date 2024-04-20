@@ -5,7 +5,6 @@ import random
 import nltk
 from dotenv import load_dotenv
 import os
-from concurrent.futures import ThreadPoolExecutor
 
 
 
@@ -217,28 +216,19 @@ class MovieRecommendation:
             return reviews_list
         return []
 
-    def preprocess_keywords(self,movie_keywords_dict):
-        return {movie_id: '. '.join(phrase for score, phrase in keywords_with_scores)
-            for movie_id, keywords_with_scores in movie_keywords_dict.items()}
+    def get_recommended_movies(self,movie_keywords_dict, user_keywords, nlp):
+        movie_scores = []
+        for movie_id, keywords_with_scores in movie_keywords_dict.items():
+            keywords_text = '. '.join([phrase for score, phrase in keywords_with_scores])
+            matched_keywords = self.filter_keywords(keywords_text, user_keywords, nlp)
+            if matched_keywords:
+                matched_count = len(matched_keywords)
+                movie_scores.append((movie_id, matched_count))
 
-    def match_and_score(self,movie_id, keywords_text, user_keywords, nlp, top_movies):
-        matched_keywords = self.filter_keywords(keywords_text, user_keywords, nlp)
-        if matched_keywords:
-            matched_count = len(matched_keywords)
-            if len(top_movies) < 20 or matched_count > top_movies[0][1]:
-                if len(top_movies) >= 20:
-                    heapq.heappop(top_movies)
-                heapq.heappush(top_movies, (matched_count, movie_id))
+        sorted_movie_ids = [movie_id for movie_id, _ in sorted(movie_scores, key=lambda x: x[1], reverse=True)]
+        print("total recommended movies",len(sorted_movie_ids))
+        top_20_movies = random.sample(sorted_movie_ids, min(20, len(sorted_movie_ids)))
 
-    def get_recommended_movies(self, movie_keywords_dict, user_keywords, nlp):
-        preprocessed_keywords = self.preprocess_keywords(movie_keywords_dict)
-        top_movies = []
-
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.match_and_score, movie_id, keywords_text, user_keywords, nlp, top_movies)
-                    for movie_id, keywords_text in preprocessed_keywords.items()]
-
-        top_20_movies = [movie_id for _, movie_id in sorted(top_movies, reverse=True)]
         return top_20_movies
 
 
