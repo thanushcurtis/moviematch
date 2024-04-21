@@ -168,7 +168,7 @@ class MovieRecommendation:
     def discover_movies_by_genre(self,genre_ids):
         all_filtered_results = [] 
         total_pages = 30
-        range_size = 5
+        range_size = 10
         start_page = random.randint(1, total_pages - range_size + 1)
         end_page = start_page + range_size
 
@@ -192,6 +192,7 @@ class MovieRecommendation:
             else:
                 print(f"Failed to fetch movies from TMDB API for page {page}")
                 break  
+        print(f"Total movies fetched: {len(all_filtered_results)}")
         return all_filtered_results
 
 
@@ -221,22 +222,22 @@ class MovieRecommendation:
         return []
 
     def get_recommended_movies(self, movie_keywords_dict, user_keywords, nlp):
-        top_20_movies = [] 
+        recommended_movies = [] 
 
         for movie_id, keywords_with_scores in movie_keywords_dict.items():
             keywords_text = '. '.join([phrase for score, phrase in keywords_with_scores])
             matched_keywords = self.filter_keywords(keywords_text, user_keywords, nlp)
             
             if matched_keywords:
-                top_20_movies.append(movie_id)
+                recommended_movies.append(movie_id)
                 
               
-                if len(top_20_movies) == 20:
+                if len(recommended_movies) == 20:
                     print("Total recommended movies: 20")
-                    return top_20_movies
+                    return recommended_movies
 
-        print(f"Total recommended movies: {len(top_20_movies)}")
-        return top_20_movies
+        print(f"Total recommended movies: {len(recommended_movies)}")
+        return recommended_movies
 
 
             

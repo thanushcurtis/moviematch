@@ -12,7 +12,7 @@ from flask_pymongo import PyMongo
 from recom import MovieRecommendation
 import os
 from flask import send_from_directory
-import subprocess
+import time
 
 
 
@@ -250,46 +250,52 @@ def get_genres():
     
 
 
-@app.route("/get_recommendations/", methods=['POST'])
+@app.route("/get_recommendations/", methods=['GET'])
 def get_recommendations():
-    data = request.get_json()
     username = session.get('username')
 
-    genre_names = data.get('genres', [])
+    genre_names = request.args.getlist('genres') 
+    print(genre_names)
 
     genre_mapping = {genre['name']: str(genre['id']) for genre in mongo.db.genres.find()}
 
     genre_ids = [genre_mapping[name] for name in genre_names if name in genre_mapping]
+    print(genre_ids) 
+    def generate_recom():
+        
+        print("Fetching Genre Movies")
+        yield 'event: progress\ndata: Fetching Genre Movies\n\n'
+        time.sleep(1)
+        genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids) 
+        print("Extracting Genre Keywords")
+        yield 'event: progress\ndata: Fetching Genre Keywords\n\n'
+        time.sleep(1)
+        genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
+        user_doc = mongo.db.users.find_one({"username": username})
+        user_keywords = user_doc.get('userKeywords', [])
+        yield 'event: progress\ndata: Processing Movie Recommendations...\n\n'
+        time.sleep(1)
+        recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
+        recommended_movies_details = []
+        for movie_id in recommended_movies:
+            movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
+            movie_details_response = requests.get(movie_url).json()
 
+            if 'title' in movie_details_response:
+                recommended_movies_details.append({
+                    'id':movie_details_response['id'],
+                    'name': movie_details_response['title'],
+                    'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
+                    'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
+                })
+        yield f'event: data\ndata: {json.dumps(recommended_movies_details)}\n\n'
+    
+    res = Response(stream_with_context(generate_recom()), content_type='text/event-stream')
+    res.headers['Cache-Control'] = 'no-cache'
+    res.headers['X-Accel-Buffering'] = 'no'
+    res.headers['Content-Type'] = 'text/event-stream'
+    return res
 
-    print(genre_ids)  
-
-
-    print("Fetching Genre Movies")
-    genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids) 
-    print("Fetching Genre Keywords")
-    genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
-
-    user_doc = mongo.db.users.find_one({"username": username})
-    user_keywords = user_doc.get('userKeywords', [])
-    print("Getting Recommendations")
-    recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
-
-    recommended_movies_details = []
-    for movie_id in recommended_movies:
-        movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
-        movie_details_response = requests.get(movie_url).json()
-
-        if 'title' in movie_details_response:
-            recommended_movies_details.append({
-                'id':movie_details_response['id'],
-                'name': movie_details_response['title'],
-                'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
-                'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
-            })
-
-    print("Recommendations Sent")
-    return jsonify(recommended_movies_details)
 
     
 
