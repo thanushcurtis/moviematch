@@ -167,8 +167,12 @@ class MovieRecommendation:
 
     def discover_movies_by_genre(self,genre_ids):
         all_filtered_results = [] 
+        total_pages = 30
+        range_size = 5
+        start_page = random.randint(1, total_pages - range_size + 1)
+        end_page = start_page + range_size
 
-        for page in range(1, 10):  
+        for page in range(start_page, end_page):  
             url = f'https://api.themoviedb.org/3/discover/movie?with_genres={"|".join(genre_ids)}&page={page}'
             headers = {
                 'Authorization': 'Bearer ' + self.TMDB_ACCESS_TOKEN,
@@ -216,19 +220,22 @@ class MovieRecommendation:
             return reviews_list
         return []
 
-    def get_recommended_movies(self,movie_keywords_dict, user_keywords, nlp):
-        movie_scores = []
+    def get_recommended_movies(self, movie_keywords_dict, user_keywords, nlp):
+        top_20_movies = [] 
+
         for movie_id, keywords_with_scores in movie_keywords_dict.items():
             keywords_text = '. '.join([phrase for score, phrase in keywords_with_scores])
             matched_keywords = self.filter_keywords(keywords_text, user_keywords, nlp)
+            
             if matched_keywords:
-                matched_count = len(matched_keywords)
-                movie_scores.append((movie_id, matched_count))
+                top_20_movies.append(movie_id)
+                
+              
+                if len(top_20_movies) == 20:
+                    print("Total recommended movies: 20")
+                    return top_20_movies
 
-        sorted_movie_ids = [movie_id for movie_id, _ in sorted(movie_scores, key=lambda x: x[1], reverse=True)]
-        print("total recommended movies",len(sorted_movie_ids))
-        top_20_movies = random.sample(sorted_movie_ids, min(20, len(sorted_movie_ids)))
-
+        print(f"Total recommended movies: {len(top_20_movies)}")
         return top_20_movies
 
 
