@@ -130,8 +130,9 @@ class MovieRecommendation:
             if token.pos_ == 'ADJ':
                 for keyword_token in keywords_tokens:
                 
-                    if token.text.lower() == keyword_token.text.lower() or token.similarity(keyword_token) > 0.8:
-                        matched_keywords.append(token.text.lower())
+                    if token.has_vector and keyword_token.has_vector:
+                        if token.text.lower() == keyword_token.text.lower() or token.similarity(keyword_token) > 0.8:
+                            matched_keywords.append(token.text.lower())
 
         return list(set(matched_keywords))
 
@@ -171,7 +172,26 @@ class MovieRecommendation:
         range_size = 10
         start_page = random.randint(1, total_pages - range_size + 1)
         end_page = start_page + range_size
-
+        
+        url = f'https://api.themoviedb.org/3/discover/movie?with_genres={"|".join(genre_ids)}&page={1}'
+        headers = {
+                'Authorization': 'Bearer ' + self.TMDB_ACCESS_TOKEN,
+                'accept': 'application/json',
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            results = response.json()['results']
+            filtered_results = [
+                {
+                    'id': movie['id'],
+                    'original_title': movie['original_title'],
+                }
+                for movie in results
+            ]
+            all_filtered_results.extend(filtered_results)  
+        else:
+            print(f"Failed to fetch movies from TMDB API for page {page}")
+         
         for page in range(start_page, end_page):  
             url = f'https://api.themoviedb.org/3/discover/movie?with_genres={"|".join(genre_ids)}&page={page}'
             headers = {
@@ -223,19 +243,24 @@ class MovieRecommendation:
 
     def get_recommended_movies(self, movie_keywords_dict, user_keywords, nlp):
         recommended_movies = [] 
+        count = 0
+       
 
         for movie_id, keywords_with_scores in movie_keywords_dict.items():
             keywords_text = '. '.join([phrase for score, phrase in keywords_with_scores])
             matched_keywords = self.filter_keywords(keywords_text, user_keywords, nlp)
+            count += 1
             
-            if matched_keywords:
+            if len(matched_keywords) >= 5:
                 recommended_movies.append(movie_id)
                 
               
                 if len(recommended_movies) == 20:
+                    print(f"Total filtered movies: {count}")
                     print("Total recommended movies: 20")
                     return recommended_movies
 
+    
         print(f"Total recommended movies: {len(recommended_movies)}")
         return recommended_movies
 
