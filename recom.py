@@ -65,7 +65,7 @@ class MovieRecommendation:
             'Authorization': 'Bearer ' + self.TMDB_ACCESS_TOKEN,
             'accept': 'application/json',
         }
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             reviews_data = response.json()
             reviews_list = []
@@ -178,7 +178,7 @@ class MovieRecommendation:
                 'Authorization': 'Bearer ' + self.TMDB_ACCESS_TOKEN,
                 'accept': 'application/json',
         }
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             results = response.json()['results']
             filtered_results = [
@@ -198,7 +198,7 @@ class MovieRecommendation:
                 'Authorization': 'Bearer ' + self.TMDB_ACCESS_TOKEN,
                 'accept': 'application/json',
             }
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
                 results = response.json()['results']
                 filtered_results = [

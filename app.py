@@ -165,14 +165,14 @@ def get_movie_details():
     print("get_movies")
     search_query = request.args.get('query', '')  
     search_url = f"https://api.themoviedb.org/3/search/movie?api_key={tmdb_api_key}&query={search_query}"
-    search_response = requests.get(search_url).json()
+    search_response = requests.get(search_url, timeout=10).json()
 
     if search_response['results']:
         top_movie = search_response['results'][0]  # Get the top result
         movie_id = top_movie['id']
         # Fetch more details about the movie using its ID
         detail_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}"
-        detail_response = requests.get(detail_url).json()
+        detail_response = requests.get(detail_url, timeout=10).json()
         movie_details = {
             'name': detail_response.get('title', 'N/A'),
             'id': detail_response.get('id', 'N/A'),
@@ -236,7 +236,7 @@ def get_genres():
     url = f"https://api.themoviedb.org/3/genre/movie/list?api_key={tmdb_api_key}&language=en-US"
     
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         genre_names = [genre['name'] for genre in data['genres']]
@@ -304,7 +304,7 @@ def movie_details(movie_id):
 
     url = f'https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&append_to_response=videos,credits'
     
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     if response.status_code == 200:
         data = response.json() 
         movie_reviews= recommender.get_movie_reviews(movie_id)
