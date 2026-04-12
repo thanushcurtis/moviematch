@@ -64,7 +64,8 @@ def not_found(e):
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def catch_all(path):
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+    safe_path = safe_join(app.static_folder, path) if path != "" else None
+    if safe_path and os.path.exists(safe_path):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, 'index.html')
