@@ -13,7 +13,7 @@ class ApplicationConfig:
     SESSION_FILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flask_session')
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
-    SESSION_COOKIE_SECURE = False 
-    SESSION_COOKIE_SAMESITE = None  
+    SESSION_COOKIE_SECURE = True 
+    SESSION_COOKIE_SAMESITE = 'Lax'  
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}

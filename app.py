@@ -1,11 +1,12 @@
-from flask import Flask, request, jsonify, session, Response,stream_with_context
+import subprocess
+from flask import Flask, request, jsonify, session, Response, stream_with_context
 from config import ApplicationConfig
 import json
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import safe_join
 from flask_cors import CORS
 from flask_session import Session
 from flask_cors import cross_origin
-import requests
 import requests
 import spacy
 from flask_pymongo import PyMongo
@@ -14,20 +15,12 @@ import os
 from flask import send_from_directory
 import time
 
-
-
-
-
-
 app = Flask(__name__, static_folder='frontend/build', static_url_path='')
 recommender = MovieRecommendation()
 
-
-
 app.config.from_object(ApplicationConfig)
-CORS(app, origins="http://localhost:3000", supports_credentials=True,samesite=None, secure=False)
+CORS(app, origins="http://localhost:3000", supports_credentials=True, samesite=None, secure=False)
 tmdb_api_key = app.config["TMDB_API_KEY"]
-TMBD_ACCESS_TOKEN=app.config["TMDB_ACCESS_TOKEN"]
 nlp = spacy.load("en_core_web_md")
 positive_keywords = [
     "3-D", "absorbing", "acclaimed", "adult", "adventurous", "ambitious", "artistic",
@@ -87,7 +80,6 @@ def login():
     if user and check_password_hash(user['password'], password):
         session['username'] = username  
         session.modified = True  
-        print(session['username'])
         response = jsonify({'message': 'Login successful'})
         return response, 200
     else:
@@ -96,20 +88,17 @@ def login():
 @app.route("/login_status/")
 def login_status():
     user = session.get('username')
-    print(user)
     if not user:
         return jsonify({'message': 'Not logged in'}), 401
-    if user is not None:
-        return jsonify({'username': user}), 200
+    return jsonify({'username': user}), 200
     
 
 @app.route("/user-preference/")
 def user_preference():
-    login_status = login_status()
-    if(login_status == 401):
+    status = session.get('username')
+    if not status:
         return jsonify({'message': 'Not logged in'}), 401
-    else:
-        print("User is logged in")
+    return jsonify({'message': 'User is logged in'}), 200
     
 @app.route("/get_current_user/")
 def get_current_user():
@@ -136,8 +125,6 @@ def logout():
 
 @app.route("/register/", methods=["POST"])
 def register():
-    print(app.config["MONGO_URI"])  
-
     try:
         data = request.get_json()
         username = data.get("username")
@@ -162,15 +149,13 @@ def register():
 
 @app.route("/get_movies/", methods=['GET'])
 def get_movie_details():
-    print("get_movies")
     search_query = request.args.get('query', '')  
     search_url = f"https://api.themoviedb.org/3/search/movie?api_key={tmdb_api_key}&query={search_query}"
     search_response = requests.get(search_url, timeout=10).json()
 
-    if search_response['results']:
-        top_movie = search_response['results'][0]  # Get the top result
+    if search_response.get('results'):
+        top_movie = search_response['results'][0]
         movie_id = top_movie['id']
-        # Fetch more details about the movie using its ID
         detail_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}"
         detail_response = requests.get(detail_url, timeout=10).json()
         movie_details = {
@@ -200,32 +185,20 @@ def post_watched_movie():
     if not user_doc:
         return {"error": "User not found"}, 404
 
-    if 'watchedMovies' in user_doc:
-        mongo.db.users.update_one(
-            {"username": username},
-            {"$addToSet": {"watchedMovies": movie_id}}
-        )
-    else:
-        mongo.db.users.update_one(
-            {"username": username},
-            {"$set": {"watchedMovies": [movie_id]}}
-        )
+    mongo.db.users.update_one(
+        {"username": username},
+        {"$addToSet": {"watchedMovies": movie_id}}
+    )
     
     user_doc = mongo.db.users.find_one({"username": username})
     watched_movies = user_doc.get('watchedMovies', [])
     movie_reviews = recommender.fetch_reviews_for_watched_movies(watched_movies)
-    user_keywords = recommender.process_reviews(movie_reviews,positive_keywords,nlp)
+    user_keywords = recommender.process_reviews(movie_reviews, positive_keywords, nlp)
 
-    if 'userKeywords' in user_doc:
-        mongo.db.users.update_one(
-            {"username": username},
-            {"$addToSet": {"userKeywords": {"$each": user_keywords}}}
-        )
-    else:
-        mongo.db.users.update_one(
-            {"username": username},
-            {"$set": {"userKeywords":user_keywords}}
-        )
+    mongo.db.users.update_one(
+        {"username": username},
+        {"$addToSet": {"userKeywords": {"$each": user_keywords}}}
+    )
     
     return {"message": "Movie added to watched list"}, 200
 
@@ -240,12 +213,9 @@ def get_genres():
         response.raise_for_status()
         data = response.json()
         genre_names = [genre['name'] for genre in data['genres']]
-        
-
         return jsonify(genre_names)
-    
     except requests.RequestException as e:
-        print(e)
+        app.logger.error("Failed to fetch genres: {}".format(str(e)))
         return jsonify({"error": "Failed to fetch genres from TMDB"}), 500
     
 
@@ -253,74 +223,67 @@ def get_genres():
 @app.route("/get_recommendations/", methods=['GET'])
 def get_recommendations():
     username = session.get('username')
-
     genre_names = request.args.getlist('genres') 
-    print(genre_names)
-
     genre_mapping = {genre['name']: str(genre['id']) for genre in mongo.db.genres.find()}
-
     genre_ids = [genre_mapping[name] for name in genre_names if name in genre_mapping]
-    print(genre_ids) 
+
     def generate_recom():
-        
-        print("Fetching Genre Movies")
         yield 'event: progress\ndata: Fetching Genre Movies\n\n'
-        time.sleep(1)
+        time.sleep(0.5)
         genre_reviews = recommender.fetch_reviews_for_genre_movies(genre_ids) 
-        print("Extracting Genre Keywords")
         yield 'event: progress\ndata: Fetching Genre Keywords\n\n'
-        time.sleep(1)
+        time.sleep(0.5)
         genre_keywords = recommender.extract_keywords_from_all_reviews(genre_reviews)
         user_doc = mongo.db.users.find_one({"username": username})
-        user_keywords = user_doc.get('userKeywords', [])
+        user_keywords = user_doc.get('userKeywords', []) if user_doc else []
         yield 'event: progress\ndata: Processing Movie Recommendations...\n\n'
-        time.sleep(1)
+        time.sleep(0.5)
         recommended_movies = recommender.get_recommended_movies(genre_keywords, user_keywords, nlp)
         recommended_movies_details = []
         for movie_id in recommended_movies:
             movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
-            movie_details_response = requests.get(movie_url).json()
-
-            if 'title' in movie_details_response:
-                recommended_movies_details.append({
-                    'id':movie_details_response['id'],
-                    'name': movie_details_response['title'],
-                    'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
-                    'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
-                })
+            try:
+                movie_details_response = requests.get(movie_url, timeout=10).json()
+                if 'title' in movie_details_response:
+                    recommended_movies_details.append({
+                        'id': movie_details_response['id'],
+                        'name': movie_details_response['title'],
+                        'year': movie_details_response['release_date'][:4] if movie_details_response.get('release_date') else 'N/A',
+                        'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response.get('poster_path')}" if movie_details_response.get('poster_path') else None
+                    })
+            except Exception:
+                continue
         yield f'event: data\ndata: {json.dumps(recommended_movies_details)}\n\n'
     
     res = Response(stream_with_context(generate_recom()), content_type='text/event-stream')
     res.headers['Cache-Control'] = 'no-cache'
     res.headers['X-Accel-Buffering'] = 'no'
-    res.headers['Content-Type'] = 'text/event-stream'
     return res
 
 
-    
-
 @app.route('/movie-details/<movie_id>', methods=['GET'])
 def movie_details(movie_id):
-
     url = f'https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&append_to_response=videos,credits'
-    
-    response = requests.get(url, timeout=10)
-    if response.status_code == 200:
-        data = response.json() 
-        movie_reviews= recommender.get_movie_reviews(movie_id)
-        movie_keywords= recommender.process_reviews({movie_id: movie_reviews},positive_keywords,nlp)
-        movie_details = {
-            'title': data['title'],
-            'release_date': data['release_date'],
-            'poster_path': f"https://image.tmdb.org/t/p/original{data['poster_path']}",
-            'overview': data['overview'],
-            'cast': [cast_member['name'] for cast_member in data['credits']['cast'][:5]],  # Top 5 cast members
-            'user_score': data['vote_average'],
-            'keywords': movie_keywords
-        }
-        return jsonify(movie_details)
-    else:
-        return jsonify({'error': 'Failed to fetch movie details'}), 404
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json() 
+            movie_reviews = recommender.get_movie_reviews(movie_id)
+            movie_keywords = recommender.process_reviews({movie_id: movie_reviews}, positive_keywords, nlp)
+            movie_details = {
+                'title': data['title'],
+                'release_date': data['release_date'],
+                'poster_path': f"https://image.tmdb.org/t/p/original{data['poster_path']}",
+                'overview': data['overview'],
+                'cast': [cast_member['name'] for cast_member in data['credits']['cast'][:5]],
+                'user_score': data['vote_average'],
+                'keywords': movie_keywords
+            }
+            return jsonify(movie_details)
+        else:
+            return jsonify({'error': 'Failed to fetch movie details'}), 404
+    except requests.RequestException:
+        return jsonify({'error': 'Failed to fetch movie details'}), 500
     
 
 @app.route('/movie-details/post_watchlist/<movie_id>', methods=['POST'])
@@ -328,25 +291,11 @@ def add_watchlist_movie(movie_id):
     username = session.get('username')
     if not username:
         return {"error": "Unauthorized"}, 401
-    if not movie_id:
-        return {"error": "Missing movieId"}, 400
     
-    user_doc = mongo.db.users.find_one({"username": username})
-    
-    if not user_doc:
-        return {"error": "User not found"}, 404
-
-    if 'watchlist' in user_doc:
-        mongo.db.users.update_one(
-            {"username": username},
-            {"$addToSet": {"watchlist": movie_id}}
-        )
-    else:
-        mongo.db.users.update_one(
-            {"username": username},
-            {"$set": {"watchlist": [movie_id]}}
-        )
-
+    mongo.db.users.update_one(
+        {"username": username},
+        {"$addToSet": {"watchlist": movie_id}}
+    )
     return {"message": "Movie added to watchlist"}, 200
 
 @app.route('/get_watchlist/', methods=['GET'])
@@ -356,19 +305,21 @@ def get_watchlist():
         return {"error": "Unauthorized"}, 401
 
     user_doc = mongo.db.users.find_one({"username": username})
-    watchlist = user_doc.get('watchlist', [])
+    watchlist = user_doc.get('watchlist', []) if user_doc else []
     watchlist_details = []
     for movie_id in watchlist:
         movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={tmdb_api_key}&language=en-US"
-        movie_details_response = requests.get(movie_url).json()
-
-        if 'title' in movie_details_response:
-            watchlist_details.append({
-                'id': movie_details_response['id'],
-                'name': movie_details_response['title'],
-                'year': movie_details_response['release_date'][:4] if 'release_date' in movie_details_response else 'N/A',
-                'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response['poster_path']}" if 'poster_path' in movie_details_response else None
-            })
+        try:
+            movie_details_response = requests.get(movie_url, timeout=10).json()
+            if 'title' in movie_details_response:
+                watchlist_details.append({
+                    'id': movie_details_response['id'],
+                    'name': movie_details_response['title'],
+                    'year': movie_details_response['release_date'][:4] if movie_details_response.get('release_date') else 'N/A',
+                    'poster_path': f"https://image.tmdb.org/t/p/w200{movie_details_response.get('poster_path')}" if movie_details_response.get('poster_path') else None
+                })
+        except Exception:
+            continue
 
     return jsonify(watchlist_details)
 
@@ -377,19 +328,11 @@ def remove_from_watchlist(movie_id):
     username = session.get('username')
     if not username:
         return {"error": "Unauthorized"}, 401
-    if not movie_id:
-        return {"error": "Missing movieId"}, 400
-    user_doc = mongo.db.users.find_one({"username": username})
-    watchlist = user_doc.get('watchlist', [])
-
-    if movie_id in watchlist:
-        mongo.db.users.update_one(
-            {"username": username},
-            {"$pull": {"watchlist": movie_id}}
-        )
-        return {"message": "Movie removed from watchlist"}, 200
-    else:
-        return {"error": "Movie not in watchlist"}, 404
+    mongo.db.users.update_one(
+        {"username": username},
+        {"$pull": {"watchlist": movie_id}}
+    )
+    return {"message": "Movie removed from watchlist"}, 200
 
 @app.route('/get_watchlist_ids/', methods=['GET'])
 def get_watchlist_ids():
@@ -397,9 +340,9 @@ def get_watchlist_ids():
     if not username:
         return {"error": "Unauthorized"}, 401
     user_doc = mongo.db.users.find_one({"username": username})
-    watchlist = user_doc.get('watchlist', [])
-    return watchlist
+    watchlist = user_doc.get('watchlist', []) if user_doc else []
+    return jsonify(watchlist)
 
 
 if __name__ == "__main__":
-    os.system("gunicorn -w 4 -b 0.0.0.0:8080 -t 300 app:app")
+    subprocess.run(["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "-t", "300", "app:app"])

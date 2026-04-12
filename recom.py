@@ -224,7 +224,7 @@ class MovieRecommendation:
         'Authorization': 'Bearer '+self.TMDB_ACCESS_TOKEN,
         'accept': 'application/json',
         }
-        response = requests.get(reviews_url,headers=headers)
+        response = requests.get(reviews_url, headers=headers, timeout=10)
         if response.status_code == 200:
             reviews_data = response.json()
             reviews_list = []
